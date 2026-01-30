@@ -16,12 +16,16 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   user-select: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 480px; /* Ensure space for footer */
 }
 
 .header {
   background: linear-gradient(90deg, #3b82f6 0%, #22d3ee 100%);
   padding: 12px 16px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .title {
@@ -34,6 +38,7 @@ body {
   display: flex;
   background-color: var(--input-bg);
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .tab-btn {
@@ -62,6 +67,8 @@ body {
 
 .main {
   padding: 16px;
+  flex-grow: 1;
+  overflow-y: auto;
 }
 
 .tab-content {
@@ -78,12 +85,7 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.mode-section,
-.input-section,
-.stop-condition-section,
-.stealth-section,
-.start-condition-section,
-.status-section {
+.section {
   margin-bottom: 20px;
 }
 
@@ -131,7 +133,7 @@ body {
   border-color: var(--primary-color);
 }
 
-.field-input input {
+.field-input input, .field-input select {
   flex: 1;
   background: transparent;
   border: none;
@@ -142,15 +144,17 @@ body {
   width: 100%;
 }
 
-/* Specific styling for time input */
-input[type="time"]::-webkit-calendar-picker-indicator {
-    filter: invert(1);
-}
-
 .field-input .suffix {
   font-size: 12px;
   color: #64748b;
   margin-left: 4px;
+}
+
+.footer {
+  padding: 16px;
+  background-color: var(--input-bg);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .primary-button {
@@ -197,13 +201,8 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .status-section {
   font-size: 12px;
   color: #94a3b8;
-  margin-top: 16px;
-  border-top: 1px solid var(--border-color);
-  padding-top: 12px;
-}
-
-.action-section {
-  margin-top: 20px;
+  margin-top: 8px;
+  text-align: center;
 }
 
 .hidden {
@@ -213,8 +212,9 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .validation-message {
   color: var(--danger-color);
   font-size: 11px;
-  margin-top: 4px;
+  margin-bottom: 8px;
   min-height: 14px;
+  text-align: center;
 }
 
 .link-warn {
@@ -225,6 +225,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   border: 1px solid rgba(250, 204, 21, 0.3);
   border-radius: 4px;
   line-height: 1.4;
+  font-size: 11px;
 }
 
 /* Custom Checkbox */

@@ -17,15 +17,17 @@
   const stopCountInput = document.getElementById("stop-count-input");
   const stopTimeInput = document.getElementById("stop-time-input");
 
+  // Stealth
   const alwaysActiveCheck = document.getElementById("always-active-check");
   const mouseJigglerCheck = document.getElementById("mouse-jiggler-check");
-  const captchaAlertCheck = document.getElementById("captcha-alert-check");
+  const autoScrollCheck = document.getElementById("auto-scroll-check");
   const userAgentSelect = document.getElementById("user-agent-select");
 
-  const scheduledStartCheck = document.getElementById("scheduled-start-check");
-  const scheduledStartField = document.getElementById("scheduled-start-field");
-  const scheduledStartTimeInput = document.getElementById("scheduled-start-time");
-  const scheduleMessage = document.getElementById("schedule-message");
+  // Safety
+  const captchaAlertCheck = document.getElementById("captcha-alert-check");
+  const captchaSoundCheck = document.getElementById("captcha-sound-check");
+  const captchaSoundField = document.getElementById("captcha-sound-field");
+
 
   const validationMessage = document.getElementById("validation-message");
   const startSelectBtn = document.getElementById("start-select-btn");
@@ -67,48 +69,10 @@
     validateInputs();
   }
 
-  function updateStartVisibility() {
-    scheduledStartField.style.display = scheduledStartCheck.checked ? "block" : "none";
-    updateScheduleMessage();
-    validateInputs();
+  function updateSafetyVisibility() {
+    captchaSoundField.style.display = captchaAlertCheck.checked ? "block" : "none";
+    debouncedSave();
   }
-
-  function updateScheduleMessage() {
-    if (!scheduledStartCheck.checked) {
-      scheduleMessage.textContent = "";
-      return;
-    }
-    const val = scheduledStartTimeInput.value;
-    if (!val) {
-      scheduleMessage.textContent = "";
-      return;
-    }
-
-    // Calculate time until next occurrence
-    const now = new Date();
-    const [h, m] = val.split(":").map(Number);
-    let target = new Date(now);
-    target.setHours(h, m, 0, 0);
-
-    if (target <= now) {
-      // If time has passed today, schedule for tomorrow
-      target.setDate(target.getDate() + 1);
-    }
-
-    const diffMs = target - now;
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffSec = Math.floor((diffMs % 60000) / 1000);
-
-    if (diffMin > 0) {
-      scheduleMessage.textContent = `開始まで約 ${diffMin}分 ${diffSec}秒`;
-    } else {
-      scheduleMessage.textContent = `開始まで約 ${diffSec}秒`;
-    }
-  }
-
-  // Timer to update schedule message every second if visible
-  setInterval(updateScheduleMessage, 1000);
-
 
   function validateInputs() {
     validationMessage.textContent = "";
@@ -152,14 +116,6 @@
       }
     }
 
-    if (scheduledStartCheck.checked) {
-      if (!scheduledStartTimeInput.value) {
-        valid = false;
-        if (!validationMessage.textContent)
-          validationMessage.textContent = "開始時刻を入力してください。";
-      }
-    }
-
     startSelectBtn.disabled = !valid || currentState !== "idle";
     return valid;
   }
@@ -183,11 +139,6 @@
       cancelBtn.classList.add("hidden");
       stopBtn.classList.remove("hidden");
       startSelectBtn.disabled = true;
-    } else if (nextState === "scheduled") {
-      statusText.textContent = "ステータス: 開始待ち...";
-      startSelectBtn.disabled = true;
-      cancelBtn.classList.add("hidden");
-      stopBtn.classList.remove("hidden"); // Allow cancelling schedule
     }
   }
 
@@ -209,17 +160,12 @@
         "stopMinutes",
         "alwaysActive",
         "mouseJiggler",
-        "captchaAlert",
+        "autoScroll",
         "userAgent",
-        "scheduledStart",
-        "scheduledStartTime"
+        "captchaAlert",
+        "captchaSound"
       ],
       (data) => {
-        if (data.alwaysActive === true) alwaysActiveCheck.checked = true;
-        if (data.mouseJiggler === true) mouseJigglerCheck.checked = true;
-        if (data.captchaAlert === true) captchaAlertCheck.checked = true;
-        if (data.userAgent) userAgentSelect.value = data.userAgent;
-
         if (data.mode === "random") {
           modeRandomRadio.checked = true;
           if (typeof data.randomMin === "number" && data.randomMin > 0) randomMinInput.value = data.randomMin;
@@ -239,20 +185,25 @@
           stopNoneRadio.checked = true;
         }
 
-        if (data.scheduledStart === true) {
-          scheduledStartCheck.checked = true;
-          if (data.scheduledStartTime) scheduledStartTimeInput.value = data.scheduledStartTime;
-        }
+        // Stealth
+        if (data.alwaysActive === true) alwaysActiveCheck.checked = true;
+        if (data.mouseJiggler === true) mouseJigglerCheck.checked = true;
+        if (data.autoScroll === true) autoScrollCheck.checked = true;
+        if (data.userAgent) userAgentSelect.value = data.userAgent;
+
+        // Safety
+        if (data.captchaAlert === true) captchaAlertCheck.checked = true;
+        if (data.captchaSound === false) captchaSoundCheck.checked = false; // Default true, so check explicit false
 
         updateModeVisibility();
         updateStopVisibility();
-        updateStartVisibility();
+        updateSafetyVisibility();
         validateInputs();
       }
     );
   }
 
-  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, captchaAlert, userAgent, scheduledStart, scheduledStartTime) {
+  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, autoScroll, userAgent, captchaAlert, captchaSound) {
     const o = { mode };
     if (mode === "fixed") o.fixedInterval = interval;
     else {
@@ -262,12 +213,17 @@
     o.stopType = stopType ?? "none";
     if (stopType === "count" && typeof stopCount === "number") o.stopCount = stopCount;
     if (stopType === "time" && typeof stopMinutes === "number") o.stopMinutes = stopMinutes;
+
+    // Stealth
     o.alwaysActive = alwaysActive;
     o.mouseJiggler = mouseJiggler;
-    o.captchaAlert = captchaAlert;
+    o.autoScroll = autoScroll;
     o.userAgent = userAgent;
-    o.scheduledStart = scheduledStart;
-    o.scheduledStartTime = scheduledStartTime;
+
+    // Safety
+    o.captchaAlert = captchaAlert;
+    o.captchaSound = captchaSound;
+
     chrome.storage.local.set(o);
   }
 
@@ -279,12 +235,16 @@
     const stopType = stopCountRadio.checked ? "count" : stopTimeRadio.checked ? "time" : "none";
     const stopCount = Number(stopCountInput.value);
     const stopMinutes = Number(stopTimeInput.value);
+
     const alwaysActive = alwaysActiveCheck.checked;
     const mouseJiggler = mouseJigglerCheck.checked;
-    const scheduledStart = scheduledStartCheck.checked;
-    const scheduledStartTime = scheduledStartTimeInput.value;
+    const autoScroll = autoScrollCheck.checked;
+    const userAgent = userAgentSelect.value;
 
-    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, scheduledStart, scheduledStartTime);
+    const captchaAlert = captchaAlertCheck.checked;
+    const captchaSound = captchaSoundCheck.checked;
+
+    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, autoScroll, userAgent, captchaAlert, captchaSound);
   }
 
   let saveDebounceId = null;
@@ -296,6 +256,7 @@
     }, 300);
   }
 
+  // Event Listeners
   modeFixedRadio.addEventListener("change", () => { updateModeVisibility(); debouncedSave(); });
   modeRandomRadio.addEventListener("change", () => { updateModeVisibility(); debouncedSave(); });
 
@@ -314,11 +275,11 @@
 
   alwaysActiveCheck.addEventListener("change", debouncedSave);
   mouseJigglerCheck.addEventListener("change", debouncedSave);
-  captchaAlertCheck.addEventListener("change", debouncedSave);
+  autoScrollCheck.addEventListener("change", debouncedSave);
   userAgentSelect.addEventListener("change", debouncedSave);
 
-  scheduledStartCheck.addEventListener("change", () => { updateStartVisibility(); debouncedSave(); });
-  scheduledStartTimeInput.addEventListener("input", () => { updateStartVisibility(); debouncedSave(); });
+  captchaAlertCheck.addEventListener("change", updateSafetyVisibility);
+  captchaSoundCheck.addEventListener("change", debouncedSave);
 
 
   startSelectBtn.addEventListener("click", () => {
@@ -346,24 +307,15 @@
       payload.stopCondition = { type: "none" };
     }
 
-    // Pass Mouse Jiggler setting
-    payload.mouseJiggler = mouseJigglerCheck.checked;
-    payload.captchaAlert = captchaAlertCheck.checked;
-
-    // Handle Scheduled Start
-    if (scheduledStartCheck.checked && scheduledStartTimeInput.value) {
-      const now = new Date();
-      const [h, m] = scheduledStartTimeInput.value.split(":").map(Number);
-      let target = new Date(now);
-      target.setHours(h, m, 0, 0);
-      if (target <= now) target.setDate(target.getDate() + 1);
-
-      payload.scheduledStartTimestamp = target.getTime();
-      // We don't set state to "scheduled" here yet, because we still need to SELECT the target.
-      // After selection, content.js will tell us it is "scheduled" (waiting).
-      // However, visually we might want to indicate...
-      // Actually, standard flow: "Selecting" -> (Click) -> "Scheduled/Waiting" -> "Running"
-    }
+    // Pass Stealth & Safety settings
+    payload.stealth = {
+      mouseJiggler: mouseJigglerCheck.checked,
+      autoScroll: autoScrollCheck.checked
+    };
+    payload.safety = {
+      captchaAlert: captchaAlertCheck.checked,
+      captchaSound: captchaSoundCheck.checked
+    };
 
     setState("selecting");
 
@@ -382,12 +334,6 @@
             cancelBtn.classList.remove("hidden");
             return;
           }
-          // if scheduled, content script will handle waiting?
-          // Actually, content script logic for selection should probably be immediate,
-          // and then it waits to CLICK.
-          // BUT, if we want to "Schedule Start", usually we want to "Select Target NOW"
-          // and then "Start Clicking LATER".
-          // So "Selecting" state happens first. Then "Running" (or "Waiting to Run").
         }
       );
     });
@@ -421,8 +367,6 @@
     if (message?.type !== "statusUpdate") return;
     const { state, nextDelaySec, linkTargetWarning } = message;
 
-    // state from content: "idle", "selecting", "running", "scheduled"
-
     if (state === "running") {
       if (currentState === "running") {
         updateRunningStatus(nextDelaySec);
@@ -434,19 +378,12 @@
       setState("idle");
     } else if (state === "selecting") {
       setState("selecting");
-    } else if (state === "scheduled") {
-       setState("scheduled");
-       // Update text with remaining time if provided?
-       if (typeof nextDelaySec === 'number') {
-         const sec = Math.ceil(nextDelaySec);
-         statusText.textContent = `ステータス: 開始待ち... (あと${sec}秒)`;
-       }
     }
   });
 
   // Init
   updateModeVisibility();
   updateStopVisibility();
-  updateStartVisibility();
+  updateSafetyVisibility();
   loadSavedSettings();
 })();

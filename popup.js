@@ -1,11 +1,10 @@
 (() => {
+  // Elements
   const modeFixedRadio = document.getElementById("mode-fixed");
   const modeRandomRadio = document.getElementById("mode-random");
-
   const fixedField = document.getElementById("fixed-field");
   const randomMinField = document.getElementById("random-min-field");
   const randomMaxField = document.getElementById("random-max-field");
-
   const fixedInput = document.getElementById("fixed-interval");
   const randomMinInput = document.getElementById("random-min");
   const randomMaxInput = document.getElementById("random-max");
@@ -18,6 +17,21 @@
   const stopCountInput = document.getElementById("stop-count-input");
   const stopTimeInput = document.getElementById("stop-time-input");
 
+  // Stealth
+  const alwaysActiveCheck = document.getElementById("always-active-check");
+  const mouseJigglerCheck = document.getElementById("mouse-jiggler-check");
+  const autoScrollCheck = document.getElementById("auto-scroll-check");
+  const userAgentSelect = document.getElementById("user-agent-select");
+
+  // Safety
+  const captchaAlertCheck = document.getElementById("captcha-alert-check");
+  const captchaSoundCheck = document.getElementById("captcha-sound-check");
+  const captchaSoundField = document.getElementById("captcha-sound-field");
+
+  // Elements (新規追加: 緊急ボタン)
+  const globalStopBtn = document.getElementById("global-stop-btn");
+  const panicResetBtn = document.getElementById("panic-reset-btn");
+
   const validationMessage = document.getElementById("validation-message");
   const startSelectBtn = document.getElementById("start-select-btn");
   const stopBtn = document.getElementById("stop-btn");
@@ -25,7 +39,23 @@
   const statusText = document.getElementById("status-text");
   const linkWarn = document.getElementById("link-warn");
 
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const tabContents = document.querySelectorAll(".tab-content");
+
   let currentState = "idle"; // idle | selecting | running
+
+  // Tab Logic
+  tabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      // Remove active class from all
+      tabBtns.forEach(b => b.classList.remove("active"));
+      tabContents.forEach(c => c.classList.remove("active"));
+      // Add active to clicked
+      btn.classList.add("active");
+      const targetId = btn.getAttribute("data-tab");
+      document.getElementById(targetId).classList.add("active");
+    });
+  });
 
   function updateModeVisibility() {
     const isFixed = modeFixedRadio.checked;
@@ -42,6 +72,11 @@
     validateInputs();
   }
 
+  function updateSafetyVisibility() {
+    captchaSoundField.style.display = captchaAlertCheck.checked ? "block" : "none";
+    debouncedSave();
+  }
+
   function validateInputs() {
     validationMessage.textContent = "";
 
@@ -52,8 +87,7 @@
       const v = Number(fixedInput.value);
       if (!(v > 0)) {
         valid = false;
-        validationMessage.textContent =
-          "間隔は 0 より大きい値を入力してください。";
+        validationMessage.textContent = "間隔は 0 より大きい値を入力してください。";
       }
     } else {
       const min = Number(randomMinInput.value);
@@ -61,12 +95,10 @@
 
       if (!(min > 0 && max > 0)) {
         valid = false;
-        validationMessage.textContent =
-          "最小・最大とも 0 より大きい値を入力してください。";
+        validationMessage.textContent = "最小・最大とも 0 より大きい値を入力してください。";
       } else if (min > max) {
         valid = false;
-        validationMessage.textContent =
-          "最小間隔は最大間隔以下の値にしてください。";
+        validationMessage.textContent = "最小間隔は最大間隔以下の値にしてください。";
       }
     }
 
@@ -100,16 +132,12 @@
       linkWarn.classList.add("hidden");
       validateInputs();
     } else if (nextState === "selecting") {
-      statusText.textContent =
-        "ステータス: 選択中（ページ上の要素をクリック）";
+      statusText.textContent = "ステータス: 選択中（ページ上の要素をクリック）";
       startSelectBtn.disabled = true;
       stopBtn.classList.add("hidden");
       cancelBtn.classList.remove("hidden");
     } else if (nextState === "running") {
-      const sec =
-        typeof nextDelaySec === "number"
-          ? ` (次まで ${nextDelaySec.toFixed(1)}秒)`
-          : "";
+      const sec = typeof nextDelaySec === "number" ? ` (次まで ${nextDelaySec.toFixed(1)}秒)` : "";
       statusText.textContent = `ステータス: 実行中${sec}`;
       cancelBtn.classList.add("hidden");
       stopBtn.classList.remove("hidden");
@@ -119,10 +147,7 @@
 
   function updateRunningStatus(nextDelaySec) {
     if (currentState !== "running") return;
-    const sec =
-      typeof nextDelaySec === "number"
-        ? ` (次まで ${nextDelaySec.toFixed(1)}秒)`
-        : "";
+    const sec = typeof nextDelaySec === "number" ? ` (次まで ${nextDelaySec.toFixed(1)}秒)` : "";
     statusText.textContent = `ステータス: 実行中${sec}`;
   }
 
@@ -136,38 +161,52 @@
         "stopType",
         "stopCount",
         "stopMinutes",
+        "alwaysActive",
+        "mouseJiggler",
+        "autoScroll",
+        "userAgent",
+        "captchaAlert",
+        "captchaSound"
       ],
       (data) => {
         if (data.mode === "random") {
           modeRandomRadio.checked = true;
-          if (typeof data.randomMin === "number" && data.randomMin > 0)
-            randomMinInput.value = data.randomMin;
-          if (typeof data.randomMax === "number" && data.randomMax > 0)
-            randomMaxInput.value = data.randomMax;
+          if (typeof data.randomMin === "number" && data.randomMin > 0) randomMinInput.value = data.randomMin;
+          if (typeof data.randomMax === "number" && data.randomMax > 0) randomMaxInput.value = data.randomMax;
         } else {
           modeFixedRadio.checked = true;
-          if (typeof data.fixedInterval === "number" && data.fixedInterval > 0)
-            fixedInput.value = data.fixedInterval;
+          if (typeof data.fixedInterval === "number" && data.fixedInterval > 0) fixedInput.value = data.fixedInterval;
         }
+
         if (data.stopType === "count") {
           stopCountRadio.checked = true;
-          if (typeof data.stopCount === "number" && data.stopCount >= 1)
-            stopCountInput.value = Math.floor(data.stopCount);
+          if (typeof data.stopCount === "number" && data.stopCount >= 1) stopCountInput.value = Math.floor(data.stopCount);
         } else if (data.stopType === "time") {
           stopTimeRadio.checked = true;
-          if (typeof data.stopMinutes === "number" && data.stopMinutes > 0)
-            stopTimeInput.value = data.stopMinutes;
+          if (typeof data.stopMinutes === "number" && data.stopMinutes > 0) stopTimeInput.value = data.stopMinutes;
         } else {
           stopNoneRadio.checked = true;
         }
+
+        // Stealth
+        if (data.alwaysActive === true) alwaysActiveCheck.checked = true;
+        if (data.mouseJiggler === true) mouseJigglerCheck.checked = true;
+        if (data.autoScroll === true) autoScrollCheck.checked = true;
+        if (data.userAgent) userAgentSelect.value = data.userAgent;
+
+        // Safety
+        if (data.captchaAlert === true) captchaAlertCheck.checked = true;
+        if (data.captchaSound === false) captchaSoundCheck.checked = false; // Default true, so check explicit false
+
         updateModeVisibility();
         updateStopVisibility();
+        updateSafetyVisibility();
         validateInputs();
       }
     );
   }
 
-  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes) {
+  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, autoScroll, userAgent, captchaAlert, captchaSound) {
     const o = { mode };
     if (mode === "fixed") o.fixedInterval = interval;
     else {
@@ -177,6 +216,17 @@
     o.stopType = stopType ?? "none";
     if (stopType === "count" && typeof stopCount === "number") o.stopCount = stopCount;
     if (stopType === "time" && typeof stopMinutes === "number") o.stopMinutes = stopMinutes;
+
+    // Stealth
+    o.alwaysActive = alwaysActive;
+    o.mouseJiggler = mouseJiggler;
+    o.autoScroll = autoScroll;
+    o.userAgent = userAgent;
+
+    // Safety
+    o.captchaAlert = captchaAlert;
+    o.captchaSound = captchaSound;
+
     chrome.storage.local.set(o);
   }
 
@@ -188,7 +238,16 @@
     const stopType = stopCountRadio.checked ? "count" : stopTimeRadio.checked ? "time" : "none";
     const stopCount = Number(stopCountInput.value);
     const stopMinutes = Number(stopTimeInput.value);
-    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes);
+
+    const alwaysActive = alwaysActiveCheck.checked;
+    const mouseJiggler = mouseJigglerCheck.checked;
+    const autoScroll = autoScrollCheck.checked;
+    const userAgent = userAgentSelect.value;
+
+    const captchaAlert = captchaAlertCheck.checked;
+    const captchaSound = captchaSoundCheck.checked;
+
+    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, autoScroll, userAgent, captchaAlert, captchaSound);
   }
 
   let saveDebounceId = null;
@@ -200,46 +259,69 @@
     }, 300);
   }
 
-  modeFixedRadio.addEventListener("change", () => {
-    updateModeVisibility();
-    debouncedSave();
-  });
-  modeRandomRadio.addEventListener("change", () => {
-    updateModeVisibility();
-    debouncedSave();
-  });
+  // Event Listeners
+  modeFixedRadio.addEventListener("change", () => { updateModeVisibility(); debouncedSave(); });
+  modeRandomRadio.addEventListener("change", () => { updateModeVisibility(); debouncedSave(); });
 
   [fixedInput, randomMinInput, randomMaxInput].forEach((el) => {
-    el.addEventListener("input", () => {
-      validateInputs();
-      debouncedSave();
-    });
+    el.addEventListener("input", () => { validateInputs(); debouncedSave(); });
     el.addEventListener("change", debouncedSave);
   });
 
   [stopNoneRadio, stopCountRadio, stopTimeRadio].forEach((r) => {
-    r.addEventListener("change", () => {
-      updateStopVisibility();
-      debouncedSave();
-    });
+    r.addEventListener("change", () => { updateStopVisibility(); debouncedSave(); });
   });
   [stopCountInput, stopTimeInput].forEach((el) => {
-    el.addEventListener("input", () => {
-      validateInputs();
-      debouncedSave();
-    });
+    el.addEventListener("input", () => { validateInputs(); debouncedSave(); });
     el.addEventListener("change", debouncedSave);
   });
 
+  alwaysActiveCheck.addEventListener("change", debouncedSave);
+  mouseJigglerCheck.addEventListener("change", debouncedSave);
+  autoScrollCheck.addEventListener("change", debouncedSave);
+  userAgentSelect.addEventListener("change", debouncedSave);
+
+  captchaAlertCheck.addEventListener("change", updateSafetyVisibility);
+  captchaSoundCheck.addEventListener("change", debouncedSave);
+
+  // --- イベントリスナー (新規: 緊急停止ボタン) ---
+
+  // A. 全タブ停止 (Stop All Tabs)
+  globalStopBtn.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "globalStop" });
+    setState("idle");
+    statusText.textContent = "ステータス: 全タブ停止信号を送信しました";
+  });
+
+  // B. パニック・リセット (Panic Reset)
+  panicResetBtn.addEventListener("click", () => {
+    if (!confirm("【警告】\n全設定をOFFにして全ページをリロードしますか？\n偽装スクリプト等の痕跡が消去されます。")) {
+      return;
+    }
+
+    // UIを即座にOFF状態にする
+    alwaysActiveCheck.checked = false;
+    mouseJigglerCheck.checked = false;
+    autoScrollCheck.checked = false;
+    userAgentSelect.value = "default";
+
+    // Backgroundへ指令 (Background側でstorageクリアとリロード指令を行う)
+    chrome.runtime.sendMessage({ type: "globalPanic" });
+
+    setState("idle");
+    statusText.textContent = "ステータス: 完全リセットを実行しました";
+  });
+
+
   startSelectBtn.addEventListener("click", () => {
     if (!validateInputs()) return;
+
+    saveSettingsFromForm();
 
     const mode = modeFixedRadio.checked ? "fixed" : "random";
     const interval = Number(fixedInput.value);
     const min = Number(randomMinInput.value);
     const max = Number(randomMaxInput.value);
-
-    saveSettingsFromForm();
 
     const payload = { mode };
     if (mode === "fixed") payload.interval = interval;
@@ -256,6 +338,16 @@
       payload.stopCondition = { type: "none" };
     }
 
+    // Pass Stealth & Safety settings
+    payload.stealth = {
+      mouseJiggler: mouseJigglerCheck.checked,
+      autoScroll: autoScrollCheck.checked
+    };
+    payload.safety = {
+      captchaAlert: captchaAlertCheck.checked,
+      captchaSound: captchaSoundCheck.checked
+    };
+
     setState("selecting");
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -269,13 +361,9 @@
         { type: "startSelection", payload },
         (response) => {
           if (chrome.runtime.lastError) {
-            statusText.textContent =
-              "ステータス: エラー（このタブでは動作しない可能性があります）";
+            statusText.textContent = "ステータス: エラー（このタブでは動作しない可能性があります）";
             cancelBtn.classList.remove("hidden");
             return;
-          }
-          if (response && response.ok) {
-            // content 側でターゲット選択モード開始
           }
         }
       );
@@ -309,6 +397,7 @@
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type !== "statusUpdate") return;
     const { state, nextDelaySec, linkTargetWarning } = message;
+
     if (state === "running") {
       if (currentState === "running") {
         updateRunningStatus(nextDelaySec);
@@ -323,9 +412,9 @@
     }
   });
 
-  // 初期表示: 保存済み設定を復元してから表示
+  // Init
   updateModeVisibility();
   updateStopVisibility();
+  updateSafetyVisibility();
   loadSavedSettings();
 })();
-

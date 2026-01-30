@@ -17,6 +17,7 @@
   const stopTimeField = document.getElementById("stop-time-field");
   const stopCountInput = document.getElementById("stop-count-input");
   const stopTimeInput = document.getElementById("stop-time-input");
+  const alwaysActiveCheck = document.getElementById("always-active-check");
 
   const validationMessage = document.getElementById("validation-message");
   const startSelectBtn = document.getElementById("start-select-btn");
@@ -136,8 +137,12 @@
         "stopType",
         "stopCount",
         "stopMinutes",
+        "alwaysActive",
       ],
       (data) => {
+        if (data.alwaysActive === true) {
+          alwaysActiveCheck.checked = true;
+        }
         if (data.mode === "random") {
           modeRandomRadio.checked = true;
           if (typeof data.randomMin === "number" && data.randomMin > 0)
@@ -167,7 +172,7 @@
     );
   }
 
-  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes) {
+  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive) {
     const o = { mode };
     if (mode === "fixed") o.fixedInterval = interval;
     else {
@@ -177,6 +182,7 @@
     o.stopType = stopType ?? "none";
     if (stopType === "count" && typeof stopCount === "number") o.stopCount = stopCount;
     if (stopType === "time" && typeof stopMinutes === "number") o.stopMinutes = stopMinutes;
+    o.alwaysActive = alwaysActive;
     chrome.storage.local.set(o);
   }
 
@@ -188,7 +194,8 @@
     const stopType = stopCountRadio.checked ? "count" : stopTimeRadio.checked ? "time" : "none";
     const stopCount = Number(stopCountInput.value);
     const stopMinutes = Number(stopTimeInput.value);
-    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes);
+    const alwaysActive = alwaysActiveCheck.checked;
+    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive);
   }
 
   let saveDebounceId = null;
@@ -230,6 +237,8 @@
     });
     el.addEventListener("change", debouncedSave);
   });
+
+  alwaysActiveCheck.addEventListener("change", debouncedSave);
 
   startSelectBtn.addEventListener("click", () => {
     if (!validateInputs()) return;

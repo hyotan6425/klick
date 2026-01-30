@@ -1,11 +1,10 @@
 (() => {
+  // Elements
   const modeFixedRadio = document.getElementById("mode-fixed");
   const modeRandomRadio = document.getElementById("mode-random");
-
   const fixedField = document.getElementById("fixed-field");
   const randomMinField = document.getElementById("random-min-field");
   const randomMaxField = document.getElementById("random-max-field");
-
   const fixedInput = document.getElementById("fixed-interval");
   const randomMinInput = document.getElementById("random-min");
   const randomMaxInput = document.getElementById("random-max");
@@ -17,7 +16,16 @@
   const stopTimeField = document.getElementById("stop-time-field");
   const stopCountInput = document.getElementById("stop-count-input");
   const stopTimeInput = document.getElementById("stop-time-input");
+
   const alwaysActiveCheck = document.getElementById("always-active-check");
+  const mouseJigglerCheck = document.getElementById("mouse-jiggler-check");
+  const captchaAlertCheck = document.getElementById("captcha-alert-check");
+  const userAgentSelect = document.getElementById("user-agent-select");
+
+  const scheduledStartCheck = document.getElementById("scheduled-start-check");
+  const scheduledStartField = document.getElementById("scheduled-start-field");
+  const scheduledStartTimeInput = document.getElementById("scheduled-start-time");
+  const scheduleMessage = document.getElementById("schedule-message");
 
   const validationMessage = document.getElementById("validation-message");
   const startSelectBtn = document.getElementById("start-select-btn");
@@ -26,7 +34,23 @@
   const statusText = document.getElementById("status-text");
   const linkWarn = document.getElementById("link-warn");
 
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const tabContents = document.querySelectorAll(".tab-content");
+
   let currentState = "idle"; // idle | selecting | running
+
+  // Tab Logic
+  tabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      // Remove active class from all
+      tabBtns.forEach(b => b.classList.remove("active"));
+      tabContents.forEach(c => c.classList.remove("active"));
+      // Add active to clicked
+      btn.classList.add("active");
+      const targetId = btn.getAttribute("data-tab");
+      document.getElementById(targetId).classList.add("active");
+    });
+  });
 
   function updateModeVisibility() {
     const isFixed = modeFixedRadio.checked;
@@ -43,6 +67,49 @@
     validateInputs();
   }
 
+  function updateStartVisibility() {
+    scheduledStartField.style.display = scheduledStartCheck.checked ? "block" : "none";
+    updateScheduleMessage();
+    validateInputs();
+  }
+
+  function updateScheduleMessage() {
+    if (!scheduledStartCheck.checked) {
+      scheduleMessage.textContent = "";
+      return;
+    }
+    const val = scheduledStartTimeInput.value;
+    if (!val) {
+      scheduleMessage.textContent = "";
+      return;
+    }
+
+    // Calculate time until next occurrence
+    const now = new Date();
+    const [h, m] = val.split(":").map(Number);
+    let target = new Date(now);
+    target.setHours(h, m, 0, 0);
+
+    if (target <= now) {
+      // If time has passed today, schedule for tomorrow
+      target.setDate(target.getDate() + 1);
+    }
+
+    const diffMs = target - now;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffSec = Math.floor((diffMs % 60000) / 1000);
+
+    if (diffMin > 0) {
+      scheduleMessage.textContent = `開始まで約 ${diffMin}分 ${diffSec}秒`;
+    } else {
+      scheduleMessage.textContent = `開始まで約 ${diffSec}秒`;
+    }
+  }
+
+  // Timer to update schedule message every second if visible
+  setInterval(updateScheduleMessage, 1000);
+
+
   function validateInputs() {
     validationMessage.textContent = "";
 
@@ -53,8 +120,7 @@
       const v = Number(fixedInput.value);
       if (!(v > 0)) {
         valid = false;
-        validationMessage.textContent =
-          "間隔は 0 より大きい値を入力してください。";
+        validationMessage.textContent = "間隔は 0 より大きい値を入力してください。";
       }
     } else {
       const min = Number(randomMinInput.value);
@@ -62,12 +128,10 @@
 
       if (!(min > 0 && max > 0)) {
         valid = false;
-        validationMessage.textContent =
-          "最小・最大とも 0 より大きい値を入力してください。";
+        validationMessage.textContent = "最小・最大とも 0 より大きい値を入力してください。";
       } else if (min > max) {
         valid = false;
-        validationMessage.textContent =
-          "最小間隔は最大間隔以下の値にしてください。";
+        validationMessage.textContent = "最小間隔は最大間隔以下の値にしてください。";
       }
     }
 
@@ -88,6 +152,14 @@
       }
     }
 
+    if (scheduledStartCheck.checked) {
+      if (!scheduledStartTimeInput.value) {
+        valid = false;
+        if (!validationMessage.textContent)
+          validationMessage.textContent = "開始時刻を入力してください。";
+      }
+    }
+
     startSelectBtn.disabled = !valid || currentState !== "idle";
     return valid;
   }
@@ -101,29 +173,27 @@
       linkWarn.classList.add("hidden");
       validateInputs();
     } else if (nextState === "selecting") {
-      statusText.textContent =
-        "ステータス: 選択中（ページ上の要素をクリック）";
+      statusText.textContent = "ステータス: 選択中（ページ上の要素をクリック）";
       startSelectBtn.disabled = true;
       stopBtn.classList.add("hidden");
       cancelBtn.classList.remove("hidden");
     } else if (nextState === "running") {
-      const sec =
-        typeof nextDelaySec === "number"
-          ? ` (次まで ${nextDelaySec.toFixed(1)}秒)`
-          : "";
+      const sec = typeof nextDelaySec === "number" ? ` (次まで ${nextDelaySec.toFixed(1)}秒)` : "";
       statusText.textContent = `ステータス: 実行中${sec}`;
       cancelBtn.classList.add("hidden");
       stopBtn.classList.remove("hidden");
       startSelectBtn.disabled = true;
+    } else if (nextState === "scheduled") {
+      statusText.textContent = "ステータス: 開始待ち...";
+      startSelectBtn.disabled = true;
+      cancelBtn.classList.add("hidden");
+      stopBtn.classList.remove("hidden"); // Allow cancelling schedule
     }
   }
 
   function updateRunningStatus(nextDelaySec) {
     if (currentState !== "running") return;
-    const sec =
-      typeof nextDelaySec === "number"
-        ? ` (次まで ${nextDelaySec.toFixed(1)}秒)`
-        : "";
+    const sec = typeof nextDelaySec === "number" ? ` (次まで ${nextDelaySec.toFixed(1)}秒)` : "";
     statusText.textContent = `ステータス: 実行中${sec}`;
   }
 
@@ -138,41 +208,51 @@
         "stopCount",
         "stopMinutes",
         "alwaysActive",
+        "mouseJiggler",
+        "captchaAlert",
+        "userAgent",
+        "scheduledStart",
+        "scheduledStartTime"
       ],
       (data) => {
-        if (data.alwaysActive === true) {
-          alwaysActiveCheck.checked = true;
-        }
+        if (data.alwaysActive === true) alwaysActiveCheck.checked = true;
+        if (data.mouseJiggler === true) mouseJigglerCheck.checked = true;
+        if (data.captchaAlert === true) captchaAlertCheck.checked = true;
+        if (data.userAgent) userAgentSelect.value = data.userAgent;
+
         if (data.mode === "random") {
           modeRandomRadio.checked = true;
-          if (typeof data.randomMin === "number" && data.randomMin > 0)
-            randomMinInput.value = data.randomMin;
-          if (typeof data.randomMax === "number" && data.randomMax > 0)
-            randomMaxInput.value = data.randomMax;
+          if (typeof data.randomMin === "number" && data.randomMin > 0) randomMinInput.value = data.randomMin;
+          if (typeof data.randomMax === "number" && data.randomMax > 0) randomMaxInput.value = data.randomMax;
         } else {
           modeFixedRadio.checked = true;
-          if (typeof data.fixedInterval === "number" && data.fixedInterval > 0)
-            fixedInput.value = data.fixedInterval;
+          if (typeof data.fixedInterval === "number" && data.fixedInterval > 0) fixedInput.value = data.fixedInterval;
         }
+
         if (data.stopType === "count") {
           stopCountRadio.checked = true;
-          if (typeof data.stopCount === "number" && data.stopCount >= 1)
-            stopCountInput.value = Math.floor(data.stopCount);
+          if (typeof data.stopCount === "number" && data.stopCount >= 1) stopCountInput.value = Math.floor(data.stopCount);
         } else if (data.stopType === "time") {
           stopTimeRadio.checked = true;
-          if (typeof data.stopMinutes === "number" && data.stopMinutes > 0)
-            stopTimeInput.value = data.stopMinutes;
+          if (typeof data.stopMinutes === "number" && data.stopMinutes > 0) stopTimeInput.value = data.stopMinutes;
         } else {
           stopNoneRadio.checked = true;
         }
+
+        if (data.scheduledStart === true) {
+          scheduledStartCheck.checked = true;
+          if (data.scheduledStartTime) scheduledStartTimeInput.value = data.scheduledStartTime;
+        }
+
         updateModeVisibility();
         updateStopVisibility();
+        updateStartVisibility();
         validateInputs();
       }
     );
   }
 
-  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive) {
+  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, captchaAlert, userAgent, scheduledStart, scheduledStartTime) {
     const o = { mode };
     if (mode === "fixed") o.fixedInterval = interval;
     else {
@@ -183,6 +263,11 @@
     if (stopType === "count" && typeof stopCount === "number") o.stopCount = stopCount;
     if (stopType === "time" && typeof stopMinutes === "number") o.stopMinutes = stopMinutes;
     o.alwaysActive = alwaysActive;
+    o.mouseJiggler = mouseJiggler;
+    o.captchaAlert = captchaAlert;
+    o.userAgent = userAgent;
+    o.scheduledStart = scheduledStart;
+    o.scheduledStartTime = scheduledStartTime;
     chrome.storage.local.set(o);
   }
 
@@ -195,7 +280,11 @@
     const stopCount = Number(stopCountInput.value);
     const stopMinutes = Number(stopTimeInput.value);
     const alwaysActive = alwaysActiveCheck.checked;
-    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive);
+    const mouseJiggler = mouseJigglerCheck.checked;
+    const scheduledStart = scheduledStartCheck.checked;
+    const scheduledStartTime = scheduledStartTimeInput.value;
+
+    saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, scheduledStart, scheduledStartTime);
   }
 
   let saveDebounceId = null;
@@ -207,48 +296,40 @@
     }, 300);
   }
 
-  modeFixedRadio.addEventListener("change", () => {
-    updateModeVisibility();
-    debouncedSave();
-  });
-  modeRandomRadio.addEventListener("change", () => {
-    updateModeVisibility();
-    debouncedSave();
-  });
+  modeFixedRadio.addEventListener("change", () => { updateModeVisibility(); debouncedSave(); });
+  modeRandomRadio.addEventListener("change", () => { updateModeVisibility(); debouncedSave(); });
 
   [fixedInput, randomMinInput, randomMaxInput].forEach((el) => {
-    el.addEventListener("input", () => {
-      validateInputs();
-      debouncedSave();
-    });
+    el.addEventListener("input", () => { validateInputs(); debouncedSave(); });
     el.addEventListener("change", debouncedSave);
   });
 
   [stopNoneRadio, stopCountRadio, stopTimeRadio].forEach((r) => {
-    r.addEventListener("change", () => {
-      updateStopVisibility();
-      debouncedSave();
-    });
+    r.addEventListener("change", () => { updateStopVisibility(); debouncedSave(); });
   });
   [stopCountInput, stopTimeInput].forEach((el) => {
-    el.addEventListener("input", () => {
-      validateInputs();
-      debouncedSave();
-    });
+    el.addEventListener("input", () => { validateInputs(); debouncedSave(); });
     el.addEventListener("change", debouncedSave);
   });
 
   alwaysActiveCheck.addEventListener("change", debouncedSave);
+  mouseJigglerCheck.addEventListener("change", debouncedSave);
+  captchaAlertCheck.addEventListener("change", debouncedSave);
+  userAgentSelect.addEventListener("change", debouncedSave);
+
+  scheduledStartCheck.addEventListener("change", () => { updateStartVisibility(); debouncedSave(); });
+  scheduledStartTimeInput.addEventListener("input", () => { updateStartVisibility(); debouncedSave(); });
+
 
   startSelectBtn.addEventListener("click", () => {
     if (!validateInputs()) return;
+
+    saveSettingsFromForm();
 
     const mode = modeFixedRadio.checked ? "fixed" : "random";
     const interval = Number(fixedInput.value);
     const min = Number(randomMinInput.value);
     const max = Number(randomMaxInput.value);
-
-    saveSettingsFromForm();
 
     const payload = { mode };
     if (mode === "fixed") payload.interval = interval;
@@ -265,6 +346,25 @@
       payload.stopCondition = { type: "none" };
     }
 
+    // Pass Mouse Jiggler setting
+    payload.mouseJiggler = mouseJigglerCheck.checked;
+    payload.captchaAlert = captchaAlertCheck.checked;
+
+    // Handle Scheduled Start
+    if (scheduledStartCheck.checked && scheduledStartTimeInput.value) {
+      const now = new Date();
+      const [h, m] = scheduledStartTimeInput.value.split(":").map(Number);
+      let target = new Date(now);
+      target.setHours(h, m, 0, 0);
+      if (target <= now) target.setDate(target.getDate() + 1);
+
+      payload.scheduledStartTimestamp = target.getTime();
+      // We don't set state to "scheduled" here yet, because we still need to SELECT the target.
+      // After selection, content.js will tell us it is "scheduled" (waiting).
+      // However, visually we might want to indicate...
+      // Actually, standard flow: "Selecting" -> (Click) -> "Scheduled/Waiting" -> "Running"
+    }
+
     setState("selecting");
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -278,14 +378,16 @@
         { type: "startSelection", payload },
         (response) => {
           if (chrome.runtime.lastError) {
-            statusText.textContent =
-              "ステータス: エラー（このタブでは動作しない可能性があります）";
+            statusText.textContent = "ステータス: エラー（このタブでは動作しない可能性があります）";
             cancelBtn.classList.remove("hidden");
             return;
           }
-          if (response && response.ok) {
-            // content 側でターゲット選択モード開始
-          }
+          // if scheduled, content script will handle waiting?
+          // Actually, content script logic for selection should probably be immediate,
+          // and then it waits to CLICK.
+          // BUT, if we want to "Schedule Start", usually we want to "Select Target NOW"
+          // and then "Start Clicking LATER".
+          // So "Selecting" state happens first. Then "Running" (or "Waiting to Run").
         }
       );
     });
@@ -318,6 +420,9 @@
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type !== "statusUpdate") return;
     const { state, nextDelaySec, linkTargetWarning } = message;
+
+    // state from content: "idle", "selecting", "running", "scheduled"
+
     if (state === "running") {
       if (currentState === "running") {
         updateRunningStatus(nextDelaySec);
@@ -329,12 +434,19 @@
       setState("idle");
     } else if (state === "selecting") {
       setState("selecting");
+    } else if (state === "scheduled") {
+       setState("scheduled");
+       // Update text with remaining time if provided?
+       if (typeof nextDelaySec === 'number') {
+         const sec = Math.ceil(nextDelaySec);
+         statusText.textContent = `ステータス: 開始待ち... (あと${sec}秒)`;
+       }
     }
   });
 
-  // 初期表示: 保存済み設定を復元してから表示
+  // Init
   updateModeVisibility();
   updateStopVisibility();
+  updateStartVisibility();
   loadSavedSettings();
 })();
-

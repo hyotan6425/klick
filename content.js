@@ -1,40 +1,54 @@
 (() => {
-  chrome.storage.local.get("alwaysActive", (data) => {
-    if (data.alwaysActive) {
-      injectAntiBlurScript();
+  chrome.storage.local.get(["alwaysActive", "userAgent"], (data) => {
+    if (data.alwaysActive || (data.userAgent && data.userAgent !== "default")) {
+      injectStealthScript(data.alwaysActive, data.userAgent);
     }
   });
 
-  function injectAntiBlurScript() {
+  function injectStealthScript(antiBlur, userAgent) {
     const script = document.createElement("script");
-    script.textContent = `
-      (() => {
-        Object.defineProperty(document, 'visibilityState', {
-          get: () => 'visible',
-          configurable: true
-        });
 
-        Object.defineProperty(document, 'hidden', {
-          get: () => false,
-          configurable: true
-        });
+    let code = `(() => {`;
 
-        const originalHasFocus = document.hasFocus;
+    if (antiBlur) {
+      code += `
+        Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+        Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
         document.hasFocus = () => true;
-
-        const blockEvent = (e) => {
-          e.stopImmediatePropagation();
-          e.stopPropagation();
-        };
-
+        const blockEvent = (e) => { e.stopImmediatePropagation(); e.stopPropagation(); };
         window.addEventListener('visibilitychange', blockEvent, true);
         window.addEventListener('webkitvisibilitychange', blockEvent, true);
         window.addEventListener('blur', blockEvent, true);
         window.addEventListener('mouseleave', blockEvent, true);
-
         console.log('[FlexiClicker] Anti-Blur mode activated.');
-      })();
-    `;
+      `;
+    }
+
+    if (userAgent && userAgent !== "default") {
+      let ua = "", platform = "";
+      if (userAgent === "iphone") {
+        ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1";
+        platform = "iPhone";
+      } else if (userAgent === "android") {
+        ua = "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36";
+        platform = "Linux armv8l";
+      } else if (userAgent === "mac") {
+        ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15";
+        platform = "MacIntel";
+      }
+
+      if (ua) {
+        code += `
+          Object.defineProperty(navigator, 'userAgent', { get: () => '${ua}', configurable: true });
+          Object.defineProperty(navigator, 'platform', { get: () => '${platform}', configurable: true });
+          console.log('[FlexiClicker] User-Agent spoofed to ${userAgent}');
+        `;
+      }
+    }
+
+    code += `})();`;
+
+    script.textContent = code;
     (document.head || document.documentElement).appendChild(script);
     script.remove();
   }
@@ -46,7 +60,8 @@
   let timerId = null;
   let scheduledTimerId = null;
   let jigglerTimerId = null;
-  let currentConfig = null; // { mode, interval | min/max, stopCondition?, mouseJiggler?, scheduledStartTimestamp? }
+  let captchaTimerId = null;
+  let currentConfig = null; // { mode, interval | min/max, stopCondition?, mouseJiggler?, scheduledStartTimestamp?, captchaAlert? }
   let clickCount = 0;
   let runStartTime = 0;
 
@@ -134,6 +149,61 @@
     if (scheduledTimerId != null) {
       clearTimeout(scheduledTimerId);
       scheduledTimerId = null;
+    }
+    if (captchaTimerId != null) {
+      clearInterval(captchaTimerId);
+      captchaTimerId = null;
+    }
+  }
+
+  function startCaptchaCheck() {
+    if (captchaTimerId) return;
+    captchaTimerId = setInterval(() => {
+      // Common CAPTCHA selectors
+      const selectors = [
+        'iframe[src*="recaptcha"]',
+        'iframe[src*="hcaptcha"]',
+        'iframe[title*="reCAPTCHA"]',
+        '#captcha',
+        '.g-recaptcha',
+        '.h-captcha'
+      ];
+
+      let detected = false;
+      for (const sel of selectors) {
+        if (document.querySelector(sel)) {
+          detected = true;
+          break;
+        }
+      }
+
+      if (detected) {
+        console.warn("[FlexiClicker] CAPTCHA detected! Stopping.");
+        stopAll();
+        playAlertSound();
+        alert("FlexiClicker: CAPTCHA detected! Automation stopped.");
+      }
+    }, 2000);
+  }
+
+  function playAlertSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {
+      console.error("Audio error", e);
     }
   }
 
@@ -323,6 +393,9 @@
         if (currentConfig.mouseJiggler) {
           startJiggler();
         }
+        if (currentConfig.captchaAlert) {
+          startCaptchaCheck();
+        }
 
         scheduledTimerId = setTimeout(() => {
           scheduled = false;
@@ -340,6 +413,9 @@
     if (currentConfig.mouseJiggler) {
       startJiggler();
     }
+    if (currentConfig.captchaAlert) {
+      startCaptchaCheck();
+    }
     scheduleNextClick();
   }
 
@@ -348,7 +424,7 @@
 
     if (message.type === "startSelection") {
       const payload = message.payload || {};
-      const { mode, interval, min, max, stopCondition, mouseJiggler, scheduledStartTimestamp } = payload;
+      const { mode, interval, min, max, stopCondition, mouseJiggler, scheduledStartTimestamp, captchaAlert } = payload;
 
       if (!(mode === "fixed" || mode === "random")) {
         sendResponse?.({ ok: false });
@@ -382,8 +458,8 @@
       targetElement = null;
       currentConfig =
         mode === "fixed"
-          ? { mode, interval: Number(interval), stopCondition: sc, mouseJiggler: !!mouseJiggler, scheduledStartTimestamp }
-          : { mode, min: Number(min), max: Number(max), stopCondition: sc, mouseJiggler: !!mouseJiggler, scheduledStartTimestamp };
+          ? { mode, interval: Number(interval), stopCondition: sc, mouseJiggler: !!mouseJiggler, scheduledStartTimestamp, captchaAlert: !!captchaAlert }
+          : { mode, min: Number(min), max: Number(max), stopCondition: sc, mouseJiggler: !!mouseJiggler, scheduledStartTimestamp, captchaAlert: !!captchaAlert };
 
       window.addEventListener("mouseover", handleMouseOver, true);
       window.addEventListener("click", handleSelectClick, true);

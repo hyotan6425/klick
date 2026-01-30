@@ -19,6 +19,8 @@
 
   const alwaysActiveCheck = document.getElementById("always-active-check");
   const mouseJigglerCheck = document.getElementById("mouse-jiggler-check");
+  const captchaAlertCheck = document.getElementById("captcha-alert-check");
+  const userAgentSelect = document.getElementById("user-agent-select");
 
   const scheduledStartCheck = document.getElementById("scheduled-start-check");
   const scheduledStartField = document.getElementById("scheduled-start-field");
@@ -207,12 +209,16 @@
         "stopMinutes",
         "alwaysActive",
         "mouseJiggler",
+        "captchaAlert",
+        "userAgent",
         "scheduledStart",
         "scheduledStartTime"
       ],
       (data) => {
         if (data.alwaysActive === true) alwaysActiveCheck.checked = true;
         if (data.mouseJiggler === true) mouseJigglerCheck.checked = true;
+        if (data.captchaAlert === true) captchaAlertCheck.checked = true;
+        if (data.userAgent) userAgentSelect.value = data.userAgent;
 
         if (data.mode === "random") {
           modeRandomRadio.checked = true;
@@ -246,7 +252,7 @@
     );
   }
 
-  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, scheduledStart, scheduledStartTime) {
+  function saveSettings(mode, interval, min, max, stopType, stopCount, stopMinutes, alwaysActive, mouseJiggler, captchaAlert, userAgent, scheduledStart, scheduledStartTime) {
     const o = { mode };
     if (mode === "fixed") o.fixedInterval = interval;
     else {
@@ -258,6 +264,8 @@
     if (stopType === "time" && typeof stopMinutes === "number") o.stopMinutes = stopMinutes;
     o.alwaysActive = alwaysActive;
     o.mouseJiggler = mouseJiggler;
+    o.captchaAlert = captchaAlert;
+    o.userAgent = userAgent;
     o.scheduledStart = scheduledStart;
     o.scheduledStartTime = scheduledStartTime;
     chrome.storage.local.set(o);
@@ -306,6 +314,8 @@
 
   alwaysActiveCheck.addEventListener("change", debouncedSave);
   mouseJigglerCheck.addEventListener("change", debouncedSave);
+  captchaAlertCheck.addEventListener("change", debouncedSave);
+  userAgentSelect.addEventListener("change", debouncedSave);
 
   scheduledStartCheck.addEventListener("change", () => { updateStartVisibility(); debouncedSave(); });
   scheduledStartTimeInput.addEventListener("input", () => { updateStartVisibility(); debouncedSave(); });
@@ -338,6 +348,7 @@
 
     // Pass Mouse Jiggler setting
     payload.mouseJiggler = mouseJigglerCheck.checked;
+    payload.captchaAlert = captchaAlertCheck.checked;
 
     // Handle Scheduled Start
     if (scheduledStartCheck.checked && scheduledStartTimeInput.value) {

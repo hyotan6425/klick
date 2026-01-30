@@ -134,6 +134,33 @@
               ※微細なマウス移動イベントを定期的に発生させます
             </div>
           </div>
+
+          <div class="field" style="margin-top: 16px;">
+            <label class="mode-option" style="width: 100%; justify-content: space-between;">
+              <span>CAPTCHA 検知アラート</span>
+              <input type="checkbox" id="captcha-alert-check" />
+            </label>
+            <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">
+              ※CAPTCHAが表示されたら停止して音を鳴らします
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 16px;">
+            <label class="mode-label" for="user-agent-select">
+              User-Agent 偽装 (JS Level)
+            </label>
+            <div class="field-input">
+              <select id="user-agent-select" style="width: 100%; border: none; background: transparent; color: var(--text-color); padding: 8px 0; outline: none;">
+                <option value="default">デフォルト (Default)</option>
+                <option value="iphone">iPhone (Mobile Safari)</option>
+                <option value="android">Android (Chrome Mobile)</option>
+                <option value="mac">Mac (Safari)</option>
+              </select>
+            </div>
+            <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">
+              ※変更後はページのリロードが必要です
+            </div>
+          </div>
         </section>
       </div>
 

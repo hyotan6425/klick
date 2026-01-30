@@ -1,4 +1,44 @@
 (() => {
+  chrome.storage.local.get("alwaysActive", (data) => {
+    if (data.alwaysActive) {
+      injectAntiBlurScript();
+    }
+  });
+
+  function injectAntiBlurScript() {
+    const script = document.createElement("script");
+    script.textContent = `
+      (() => {
+        Object.defineProperty(document, 'visibilityState', {
+          get: () => 'visible',
+          configurable: true
+        });
+
+        Object.defineProperty(document, 'hidden', {
+          get: () => false,
+          configurable: true
+        });
+
+        const originalHasFocus = document.hasFocus;
+        document.hasFocus = () => true;
+
+        const blockEvent = (e) => {
+          e.stopImmediatePropagation();
+          e.stopPropagation();
+        };
+
+        window.addEventListener('visibilitychange', blockEvent, true);
+        window.addEventListener('webkitvisibilitychange', blockEvent, true);
+        window.addEventListener('blur', blockEvent, true);
+        window.addEventListener('mouseleave', blockEvent, true);
+
+        console.log('[FlexiClicker] Anti-Blur mode activated.');
+      })();
+    `;
+    (document.head || document.documentElement).appendChild(script);
+    script.remove();
+  }
+
   let selectionMode = false;
   let running = false;
   let targetElement = null;

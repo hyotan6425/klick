@@ -41,9 +41,12 @@
 
   let selectionMode = false;
   let running = false;
+  let scheduled = false;
   let targetElement = null;
   let timerId = null;
-  let currentConfig = null; // { mode, interval | min/max, stopCondition? }
+  let scheduledTimerId = null;
+  let jigglerTimerId = null;
+  let currentConfig = null; // { mode, interval | min/max, stopCondition?, mouseJiggler?, scheduledStartTimestamp? }
   let clickCount = 0;
   let runStartTime = 0;
 
@@ -128,16 +131,48 @@
       clearTimeout(timerId);
       timerId = null;
     }
+    if (scheduledTimerId != null) {
+      clearTimeout(scheduledTimerId);
+      scheduledTimerId = null;
+    }
+  }
+
+  function startJiggler() {
+    if (jigglerTimerId) return;
+    // Jiggler runs if enabled
+    jigglerTimerId = setInterval(() => {
+      // Move slightly around center or random
+      const x = window.innerWidth / 2 + (Math.random() * 20 - 10);
+      const y = window.innerHeight / 2 + (Math.random() * 20 - 10);
+
+      const event = new MouseEvent('mousemove', {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y
+      });
+      document.dispatchEvent(event);
+    }, 8000 + Math.random() * 4000); // Every 8-12s
+  }
+
+  function stopJiggler() {
+    if (jigglerTimerId) {
+      clearInterval(jigglerTimerId);
+      jigglerTimerId = null;
+    }
   }
 
   function stopAll() {
     selectionMode = false;
     running = false;
+    scheduled = false;
     targetElement = null;
     currentConfig = null;
     clickCount = 0;
     runStartTime = 0;
     cancelTimer();
+    stopJiggler();
     clearOverlay();
     removeNavListeners();
     window.removeEventListener("mouseover", handleMouseOver, true);
@@ -269,15 +304,42 @@
 
     selectionMode = false;
     targetElement = el;
-    running = true;
     clickCount = 0;
-    runStartTime = Date.now();
 
     window.removeEventListener("mouseover", handleMouseOver, true);
     window.removeEventListener("click", handleSelectClick, true);
 
     hideOverlay();
     addNavListeners();
+
+    // Check Scheduled Start
+    if (currentConfig.scheduledStartTimestamp) {
+      const delay = currentConfig.scheduledStartTimestamp - Date.now();
+      if (delay > 0) {
+        scheduled = true;
+        running = false;
+        sendStatus("scheduled", delay / 1000);
+
+        if (currentConfig.mouseJiggler) {
+          startJiggler();
+        }
+
+        scheduledTimerId = setTimeout(() => {
+          scheduled = false;
+          running = true;
+          runStartTime = Date.now();
+          scheduleNextClick();
+        }, delay);
+        return;
+      }
+    }
+
+    // Normal start or schedule passed
+    running = true;
+    runStartTime = Date.now();
+    if (currentConfig.mouseJiggler) {
+      startJiggler();
+    }
     scheduleNextClick();
   }
 
@@ -286,7 +348,7 @@
 
     if (message.type === "startSelection") {
       const payload = message.payload || {};
-      const { mode, interval, min, max, stopCondition } = payload;
+      const { mode, interval, min, max, stopCondition, mouseJiggler, scheduledStartTimestamp } = payload;
 
       if (!(mode === "fixed" || mode === "random")) {
         sendResponse?.({ ok: false });
@@ -320,8 +382,8 @@
       targetElement = null;
       currentConfig =
         mode === "fixed"
-          ? { mode, interval: Number(interval), stopCondition: sc }
-          : { mode, min: Number(min), max: Number(max), stopCondition: sc };
+          ? { mode, interval: Number(interval), stopCondition: sc, mouseJiggler: !!mouseJiggler, scheduledStartTimestamp }
+          : { mode, min: Number(min), max: Number(max), stopCondition: sc, mouseJiggler: !!mouseJiggler, scheduledStartTimestamp };
 
       window.addEventListener("mouseover", handleMouseOver, true);
       window.addEventListener("click", handleSelectClick, true);

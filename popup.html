@@ -10,116 +10,134 @@
       <span class="title">FlexiClicker</span>
     </header>
 
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-general">一般 (General)</button>
+      <button class="tab-btn" data-tab="tab-stop-start">条件 (Conditions)</button>
+      <button class="tab-btn" data-tab="tab-stealth">ステルス (Stealth)</button>
+    </div>
+
     <main class="main">
-      <section class="mode-section">
-        <div class="mode-label">モード</div>
-        <div class="mode-options">
-          <label class="mode-option">
-            <input
-              type="radio"
-              name="mode"
-              value="fixed"
-              id="mode-fixed"
-              checked
-            />
-            <span>固定間隔</span>
-          </label>
-          <label class="mode-option">
-            <input type="radio" name="mode" value="random" id="mode-random" />
-            <span>ランダム</span>
-          </label>
-        </div>
-      </section>
-
-      <section class="input-section">
-        <div class="field" id="fixed-field">
-          <label for="fixed-interval">間隔</label>
-          <div class="field-input">
-            <input
-              type="number"
-              id="fixed-interval"
-              min="0.1"
-              step="0.1"
-              value="1"
-            />
-            <span class="suffix">秒</span>
+      <!-- General Tab -->
+      <div id="tab-general" class="tab-content active">
+        <section class="mode-section">
+          <div class="mode-label">モード</div>
+          <div class="mode-options">
+            <label class="mode-option">
+              <input type="radio" name="mode" value="fixed" id="mode-fixed" checked />
+              <span>固定間隔</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="mode" value="random" id="mode-random" />
+              <span>ランダム</span>
+            </label>
           </div>
-        </div>
+        </section>
 
-        <div class="field" id="random-min-field">
-          <label for="random-min">最小間隔</label>
-          <div class="field-input">
-            <input
-              type="number"
-              id="random-min"
-              min="0.1"
-              step="0.1"
-              value="5"
-            />
-            <span class="suffix">秒</span>
+        <section class="input-section">
+          <div class="field" id="fixed-field">
+            <label for="fixed-interval">間隔</label>
+            <div class="field-input">
+              <input type="number" id="fixed-interval" min="0.1" step="0.1" value="1" />
+              <span class="suffix">秒</span>
+            </div>
           </div>
-        </div>
 
-        <div class="field" id="random-max-field">
-          <label for="random-max">最大間隔</label>
-          <div class="field-input">
-            <input
-              type="number"
-              id="random-max"
-              min="0.1"
-              step="0.1"
-              value="10"
-            />
-            <span class="suffix">秒</span>
+          <div class="field" id="random-min-field">
+            <label for="random-min">最小間隔</label>
+            <div class="field-input">
+              <input type="number" id="random-min" min="0.1" step="0.1" value="5" />
+              <span class="suffix">秒</span>
+            </div>
           </div>
-        </div>
 
-        <p class="validation-message" id="validation-message"></p>
-      </section>
+          <div class="field" id="random-max-field">
+            <label for="random-max">最大間隔</label>
+            <div class="field-input">
+              <input type="number" id="random-max" min="0.1" step="0.1" value="10" />
+              <span class="suffix">秒</span>
+            </div>
+          </div>
+        </section>
+      </div>
 
-      <section class="stop-condition-section">
-        <div class="mode-label">停止条件</div>
-        <div class="mode-options">
-          <label class="mode-option">
-            <input type="radio" name="stop" value="none" id="stop-none" checked />
-            <span>なし</span>
-          </label>
-          <label class="mode-option">
-            <input type="radio" name="stop" value="count" id="stop-count" />
-            <span>回数</span>
-          </label>
-          <label class="mode-option">
-            <input type="radio" name="stop" value="time" id="stop-time" />
-            <span>時間</span>
-          </label>
-        </div>
-        <div class="field" id="stop-count-field">
-          <label for="stop-count-input">回数</label>
-          <div class="field-input">
-            <input type="number" id="stop-count-input" min="1" step="1" value="100" />
-            <span class="suffix">回</span>
+      <!-- Stop/Start Tab -->
+      <div id="tab-stop-start" class="tab-content">
+        <section class="stop-condition-section">
+          <div class="mode-label">停止条件</div>
+          <div class="mode-options">
+            <label class="mode-option">
+              <input type="radio" name="stop" value="none" id="stop-none" checked />
+              <span>なし</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="stop" value="count" id="stop-count" />
+              <span>回数</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="stop" value="time" id="stop-time" />
+              <span>時間</span>
+            </label>
           </div>
-        </div>
-        <div class="field" id="stop-time-field">
-          <label for="stop-time-input">時間</label>
-          <div class="field-input">
-            <input type="number" id="stop-time-input" min="0.1" step="0.1" value="30" />
-            <span class="suffix">分</span>
+          <div class="field" id="stop-count-field">
+            <label for="stop-count-input">回数</label>
+            <div class="field-input">
+              <input type="number" id="stop-count-input" min="1" step="1" value="100" />
+              <span class="suffix">回</span>
+            </div>
           </div>
-        </div>
-      </section>
+          <div class="field" id="stop-time-field">
+            <label for="stop-time-input">時間</label>
+            <div class="field-input">
+              <input type="number" id="stop-time-input" min="0.1" step="0.1" value="30" />
+              <span class="suffix">分</span>
+            </div>
+          </div>
+        </section>
 
-      <section class="stealth-section">
-        <div class="field">
-          <label class="mode-option" style="width: 100%; justify-content: space-between;">
-            <span>常時アクティブ偽装 (Anti-Blur)</span>
-            <input type="checkbox" id="always-active-check" />
-          </label>
-          <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">
-            ※有効にするにはページのリロードが必要です
+        <section class="start-condition-section">
+          <div class="mode-label">開始条件 (Scheduled Start)</div>
+          <div class="field">
+            <label class="mode-option">
+              <input type="checkbox" id="scheduled-start-check" />
+              <span>指定時刻に開始</span>
+            </label>
           </div>
-        </div>
-      </section>
+          <div class="field" id="scheduled-start-field" style="display: none;">
+            <label for="scheduled-start-time">開始時刻</label>
+            <div class="field-input">
+              <input type="time" id="scheduled-start-time" step="1" />
+            </div>
+            <div id="schedule-message" style="font-size: 10px; color: #fbbf24; margin-top: 4px;"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Stealth Tab -->
+      <div id="tab-stealth" class="tab-content">
+        <section class="stealth-section">
+          <div class="field">
+            <label class="mode-option" style="width: 100%; justify-content: space-between;">
+              <span>常時アクティブ偽装 (Anti-Blur)</span>
+              <input type="checkbox" id="always-active-check" />
+            </label>
+            <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">
+              ※有効にするにはページのリロードが必要です
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 16px;">
+            <label class="mode-option" style="width: 100%; justify-content: space-between;">
+              <span>仮想マウスジグラー (Mouse Jiggler)</span>
+              <input type="checkbox" id="mouse-jiggler-check" />
+            </label>
+            <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">
+              ※微細なマウス移動イベントを定期的に発生させます
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <p class="validation-message" id="validation-message"></p>
 
       <section class="action-section">
         <button id="start-select-btn" class="primary-button" disabled>
@@ -140,4 +158,3 @@
     <script src="popup.js"></script>
   </body>
 </html>
-

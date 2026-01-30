@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "FlexiClicker",
+  "description": "任意のページ要素を指定した間隔（固定またはランダム）で自動クリックする Chrome 拡張機能です。",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "FlexiClicker",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon.png",
+      "48": "icons/icon.png",
+      "128": "icons/icon.png"
+    }
+  },
+  "icons": {
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "stop-flexiclicker": {
+      "suggested_key": { "default": "Ctrl+Shift+E" },
+      "description": "FlexiClicker を停止"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

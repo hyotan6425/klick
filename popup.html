@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>FlexiClicker</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="header">
+      <span class="title">FlexiClicker</span>
+    </header>
+
+    <main class="main">
+      <section class="mode-section">
+        <div class="mode-label">モード</div>
+        <div class="mode-options">
+          <label class="mode-option">
+            <input
+              type="radio"
+              name="mode"
+              value="fixed"
+              id="mode-fixed"
+              checked
+            />
+            <span>固定間隔</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="mode" value="random" id="mode-random" />
+            <span>ランダム</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="input-section">
+        <div class="field" id="fixed-field">
+          <label for="fixed-interval">間隔</label>
+          <div class="field-input">
+            <input
+              type="number"
+              id="fixed-interval"
+              min="0.1"
+              step="0.1"
+              value="1"
+            />
+            <span class="suffix">秒</span>
+          </div>
+        </div>
+
+        <div class="field" id="random-min-field">
+          <label for="random-min">最小間隔</label>
+          <div class="field-input">
+            <input
+              type="number"
+              id="random-min"
+              min="0.1"
+              step="0.1"
+              value="5"
+            />
+            <span class="suffix">秒</span>
+          </div>
+        </div>
+
+        <div class="field" id="random-max-field">
+          <label for="random-max">最大間隔</label>
+          <div class="field-input">
+            <input
+              type="number"
+              id="random-max"
+              min="0.1"
+              step="0.1"
+              value="10"
+            />
+            <span class="suffix">秒</span>
+          </div>
+        </div>
+
+        <p class="validation-message" id="validation-message"></p>
+      </section>
+
+      <section class="stop-condition-section">
+        <div class="mode-label">停止条件</div>
+        <div class="mode-options">
+          <label class="mode-option">
+            <input type="radio" name="stop" value="none" id="stop-none" checked />
+            <span>なし</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="stop" value="count" id="stop-count" />
+            <span>回数</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="stop" value="time" id="stop-time" />
+            <span>時間</span>
+          </label>
+        </div>
+        <div class="field" id="stop-count-field">
+          <label for="stop-count-input">回数</label>
+          <div class="field-input">
+            <input type="number" id="stop-count-input" min="1" step="1" value="100" />
+            <span class="suffix">回</span>
+          </div>
+        </div>
+        <div class="field" id="stop-time-field">
+          <label for="stop-time-input">時間</label>
+          <div class="field-input">
+            <input type="number" id="stop-time-input" min="0.1" step="0.1" value="30" />
+            <span class="suffix">分</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="action-section">
+        <button id="start-select-btn" class="primary-button" disabled>
+          ターゲットを選択して開始 (Select Target)
+        </button>
+      </section>
+
+      <section class="status-section">
+        <div id="status-text">ステータス: 待機中</div>
+        <div id="link-warn" class="link-warn hidden">
+          ターゲットはリンクです。連続クリックでページ遷移が発生し、ブラウザのスロットリングの原因になります。停止条件「回数」で 1 回にすると安全です。
+        </div>
+        <button id="cancel-btn" class="secondary-button hidden">キャンセル</button>
+        <button id="stop-btn" class="secondary-button hidden">停止 (STOP)</button>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
+

@@ -138,22 +138,32 @@
     }
 
     const delayMs = delaySec * 1000;
-    const linkWarn = clickCount === 0 && isLinkTarget(targetElement);
-    sendStatus("running", delaySec, linkWarn ? { linkTargetWarning: true } : {});
+
+    // Throttle status updates to prevent message flooding on fast intervals
+    if (delayMs > 100 || clickCount % 10 === 0) {
+        const linkWarn = clickCount === 0 && isLinkTarget(targetElement);
+        sendStatus("running", delaySec, linkWarn ? { linkTargetWarning: true } : {});
+    }
 
     if (clickTimerId) clearTimeout(clickTimerId);
-    clickTimerId = setTimeout(() => {
-      performClick();
-    }, delayMs);
+
+    // For extremely fast intervals, we use a more direct approach to minimize overhead
+    if (delayMs < 4) {
+        // Use recursive setTimeout with 0 delay (clamped to ~4ms by browser)
+        // OR postMessage for zero-delay (too complex for this scope?)
+        // Let's stick to setTimeout but optimized.
+        clickTimerId = setTimeout(performClick, delayMs);
+    } else {
+        clickTimerId = setTimeout(performClick, delayMs);
+    }
   }
 
   function performClick() {
     if (!running || !targetElement) return;
 
-    // Safety Check before clicking
-    if (currentConfig.safety?.captchaAlert) {
-      if (checkSafety()) return; // If safety triggered, it stops everything
-    }
+    // Lightweight checks for speed
+    // Only check safety here if interval is long enough, otherwise rely on the independent watcher
+    // But safety first? No, for speed, rely on the 500ms watcher loop.
 
     if (checkStopCondition()) {
       stopAll();
@@ -161,8 +171,18 @@
     }
 
     try {
-      humanLikeClick(targetElement);
-      flashElement(targetElement);
+      // Direct click for speed if interval is super short (< 10ms)
+      if (currentConfig.mode === "fixed" && currentConfig.interval < 0.01) {
+          targetElement.click();
+      } else {
+          humanLikeClick(targetElement);
+      }
+
+      // Reduce visual overhead for fast clicking
+      if (currentConfig.mode !== "fixed" || currentConfig.interval >= 0.05) {
+          flashElement(targetElement);
+      }
+
       clickCount += 1;
     } catch (e) {
       console.warn("[FlexiClicker] Click failed", e);

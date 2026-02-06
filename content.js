@@ -271,9 +271,10 @@
   // Also run safety check periodically independent of clicks
   function startSafetyWatcher() {
     if (safetyTimerId) return;
+    // Check more frequently (500ms) to stop immediately upon detection
     safetyTimerId = setInterval(() => {
       checkSafety();
-    }, 2000);
+    }, 500);
   }
 
   function playAlertSound() {

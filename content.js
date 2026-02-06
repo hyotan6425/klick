@@ -148,14 +148,7 @@
     if (clickTimerId) clearTimeout(clickTimerId);
 
     // For extremely fast intervals, we use a more direct approach to minimize overhead
-    if (delayMs < 4) {
-        // Use recursive setTimeout with 0 delay (clamped to ~4ms by browser)
-        // OR postMessage for zero-delay (too complex for this scope?)
-        // Let's stick to setTimeout but optimized.
-        clickTimerId = setTimeout(performClick, delayMs);
-    } else {
-        clickTimerId = setTimeout(performClick, delayMs);
-    }
+    clickTimerId = setTimeout(performClick, delayMs);
   }
 
   function performClick() {
